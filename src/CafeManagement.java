@@ -178,10 +178,10 @@ public class CafeManagement {
 
             System.out.println("\nInventory:");
             while (rs.next()) {
-                System.out.println(rs.getString("item_name") + " - " +
-                        rs.getInt("quantity") + " units");
-                if (rs.getInt("quantity") < 10) {
-                    System.out.println("⚠️ Low stock alert for " + rs.getString("item_name"));
+                System.out.println(rs.getString("ingredient_name") + " - " +
+                        rs.getInt("quantity_in_stock") + " units");
+                if (rs.getInt("quantity_in_stock") < rs.getInt("low_stock_threshold")) {
+                    System.out.println("⚠️ Low stock alert for " + rs.getString("ingredient_name"));
                 }
             }
         }
@@ -191,18 +191,18 @@ public class CafeManagement {
         System.out.print("Enter customer ID: ");
         int customerId = scanner.nextInt();
 
-        String query = "SELECT loyalty_points FROM Customers WHERE id = ?";
+        String query = "SELECT points FROM LoyaltyPoints WHERE id = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setInt(1, customerId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
-                    int points = rs.getInt("loyalty_points");
+                    int points = rs.getInt("points");
                     System.out.println("You have " + points + " points. 10 points = €1 discount.");
                     System.out.print("Enter points to redeem: ");
                     int redeemPoints = scanner.nextInt();
 
                     if (redeemPoints <= points) {
-                        String updateQuery = "UPDATE Customers SET loyalty_points = loyalty_points - ? WHERE id = ?";
+                        String updateQuery = "UPDATE LoyaltyPoints SET points = points - ? WHERE id = ?";
                         try (PreparedStatement updatePstmt = conn.prepareStatement(updateQuery)) {
                             updatePstmt.setInt(1, redeemPoints);
                             updatePstmt.setInt(2, customerId);
