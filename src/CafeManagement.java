@@ -18,8 +18,11 @@ public class CafeManagement {
                 System.out.println("1. Add Menu Item");
                 System.out.println("2. View Menu");
                 System.out.println("3. Place Order");
-                System.out.println("4. View All Orders");
-                System.out.println("5. Exit");
+                System.out.println("4. Update Order Status");
+                System.out.println("5. View All Orders");
+                System.out.println("6. View Inventory");
+                System.out.println("7. Redeem Loyalty Points");
+                System.out.println("8. Exit");
                 System.out.print("Enter your choice: ");
                 choice = scanner.nextInt();
                 scanner.nextLine(); // Consume newline
@@ -35,15 +38,24 @@ public class CafeManagement {
                         placeOrder(conn, scanner);
                         break;
                     case 4:
-                        viewOrders(conn);
+                        updateOrderStatus(conn, scanner);
                         break;
                     case 5:
+                        viewOrders(conn);
+                        break;
+                    case 6:
+                        viewInventory(conn);
+                        break;
+                    case 7:
+                        redeemLoyaltyPoints(conn, scanner);
+                        break;
+                    case 8:
                         System.out.println("Thank you for using Cafe Management System!");
                         break;
                     default:
                         System.out.println("Invalid choice. Please try again.");
                 }
-            } while (choice != 5);
+            } while (choice != 8);
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -85,19 +97,29 @@ public class CafeManagement {
     }
 
     private static void placeOrder(Connection conn, Scanner scanner) throws SQLException {
-        System.out.print("Enter the number of items in the order: ");
-        int itemCount = scanner.nextInt();
+        System.out.print("Enter customer ID (or 0 for new customer): ");
+        int customerId = scanner.nextInt();
         scanner.nextLine(); // Consume newline
 
-        String insertOrder = "INSERT INTO Orders () VALUES ()";
-        String insertOrderDetails = "INSERT INTO OrderDetails (order_id, menu_item_id, quantity) VALUES (?, ?, ?)";
+        if (customerId == 0) {
+            System.out.print("Enter new customer name: ");
+            String customerName = scanner.nextLine();
+            customerId = addCustomer(conn, customerName);
+        }
+
+        String insertOrder = "INSERT INTO Orders (customer_id, status) VALUES (?, 'Pending')";
+        String insertOrderDetails = "INSERT INTO OrderDetails (order_id, menu_item_id, quantity, customization) VALUES (?, ?, ?, ?)";
         try (PreparedStatement orderStmt = conn.prepareStatement(insertOrder, Statement.RETURN_GENERATED_KEYS);
              PreparedStatement orderDetailsStmt = conn.prepareStatement(insertOrderDetails)) {
 
+            orderStmt.setInt(1, customerId);
             orderStmt.executeUpdate();
             ResultSet generatedKeys = orderStmt.getGeneratedKeys();
             if (generatedKeys.next()) {
                 int orderId = generatedKeys.getInt(1);
+                System.out.print("Enter the number of items in the order: ");
+                int itemCount = scanner.nextInt();
+                scanner.nextLine(); // Consume newline
 
                 for (int i = 0; i < itemCount; i++) {
                     System.out.print("Enter menu item ID: ");
@@ -105,10 +127,13 @@ public class CafeManagement {
                     System.out.print("Enter quantity: ");
                     int quantity = scanner.nextInt();
                     scanner.nextLine(); // Consume newline
+                    System.out.print("Enter customization (e.g., 'extra milk, no sugar'): ");
+                    String customization = scanner.nextLine();
 
                     orderDetailsStmt.setInt(1, orderId);
                     orderDetailsStmt.setInt(2, itemId);
                     orderDetailsStmt.setInt(3, quantity);
+                    orderDetailsStmt.setString(4, customization);
                     orderDetailsStmt.executeUpdate();
                 }
 
@@ -117,6 +142,82 @@ public class CafeManagement {
         }
     }
 
+    private static int addCustomer(Connection conn, String name) throws SQLException {
+        String query = "INSERT INTO Customers (name, loyalty_points) VALUES (?, 0)";
+        try (PreparedStatement pstmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+            pstmt.setString(1, name);
+            pstmt.executeUpdate();
+            ResultSet generatedKeys = pstmt.getGeneratedKeys();
+            if (generatedKeys.next()) {
+                return generatedKeys.getInt(1);
+            }
+        }
+        return -1; // Indicates failure
+    }
+
+    private static void updateOrderStatus(Connection conn, Scanner scanner) throws SQLException {
+        System.out.print("Enter order ID: ");
+        int orderId = scanner.nextInt();
+        scanner.nextLine(); // Consume newline
+        System.out.print("Enter new status (Pending, Prepared, Served): ");
+        String status = scanner.nextLine();
+
+        String query = "UPDATE Orders SET status = ? WHERE id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setString(1, status);
+            pstmt.setInt(2, orderId);
+            pstmt.executeUpdate();
+            System.out.println("Order status updated successfully!");
+        }
+    }
+
+    private static void viewInventory(Connection conn) throws SQLException {
+        String query = "SELECT * FROM Inventory";
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+
+            System.out.println("\nInventory:");
+            while (rs.next()) {
+                System.out.println(rs.getString("item_name") + " - " +
+                        rs.getInt("quantity") + " units");
+                if (rs.getInt("quantity") < 10) {
+                    System.out.println("⚠️ Low stock alert for " + rs.getString("item_name"));
+                }
+            }
+        }
+    }
+
+    private static void redeemLoyaltyPoints(Connection conn, Scanner scanner) throws SQLException {
+        System.out.print("Enter customer ID: ");
+        int customerId = scanner.nextInt();
+
+        String query = "SELECT loyalty_points FROM Customers WHERE id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setInt(1, customerId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    int points = rs.getInt("loyalty_points");
+                    System.out.println("You have " + points + " points. 10 points = €1 discount.");
+                    System.out.print("Enter points to redeem: ");
+                    int redeemPoints = scanner.nextInt();
+
+                    if (redeemPoints <= points) {
+                        String updateQuery = "UPDATE Customers SET loyalty_points = loyalty_points - ? WHERE id = ?";
+                        try (PreparedStatement updatePstmt = conn.prepareStatement(updateQuery)) {
+                            updatePstmt.setInt(1, redeemPoints);
+                            updatePstmt.setInt(2, customerId);
+                            updatePstmt.executeUpdate();
+                            System.out.println("Points redeemed! €" + (redeemPoints / 10.0) + " discount applied.");
+                        }
+                    } else {
+                        System.out.println("Insufficient points.");
+                    }
+                } else {
+                    System.out.println("Customer not found.");
+                }
+            }
+        }
+    }
     private static void viewOrders(Connection conn) throws SQLException {
         String query = "SELECT o.id AS order_id, o.order_date, m.name, d.quantity " +
                 "FROM Orders o " +
