@@ -49,9 +49,11 @@ public class CafeManagementGUI {
         JButton addButton = new JButton(bundle.getString("add_item"));
         JButton searchButton = new JButton(bundle.getString("search"));
         JButton switchLangButton = new JButton(bundle.getString("switch_language"));
+        JButton resetButton = new JButton(bundle.getString("reset"));
         footerPanel.add(addButton);
         footerPanel.add(searchButton);
         footerPanel.add(switchLangButton);
+        footerPanel.add(resetButton);
         frame.getContentPane().add(footerPanel, BorderLayout.SOUTH);
 
         // Add button action
@@ -59,6 +61,9 @@ public class CafeManagementGUI {
 
         // Search button action
         searchButton.addActionListener(e -> searchMenuItems());
+
+        // Reset button action
+        resetButton.addActionListener(e -> loadMenuItems());
 
         // Switch Language Button
         switchLangButton.addActionListener(e -> switchLanguage());
@@ -141,6 +146,8 @@ public class CafeManagementGUI {
                 e.printStackTrace();
                 JOptionPane.showMessageDialog(frame, bundle.getString("error_searching"), bundle.getString("error"), JOptionPane.ERROR_MESSAGE);
             }
+        } else {
+            JOptionPane.showMessageDialog(frame, bundle.getString("no_results"));
         }
     }
 
