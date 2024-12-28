@@ -21,7 +21,7 @@ public class CafeManagementGUI {
 
     private void setLocale(Locale locale) {
         Locale.setDefault(locale);
-        bundle = ResourceBundle.getBundle("MessagesBundle", locale);
+        bundle = ResourceBundle.getBundle("MessagesBundle_en_EN", locale);
     }
 
     private void initialize() {
