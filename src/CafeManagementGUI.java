@@ -14,6 +14,8 @@ public class CafeManagementGUI {
 
     private JFrame frame;
     private DefaultTableModel menuTableModel;
+    private DefaultTableModel customerTableModel;
+    private JTable customerTable;
     private ResourceBundle bundle;
     private JTable menuTable;
 
@@ -40,12 +42,27 @@ public class CafeManagementGUI {
         headerPanel.add(titleLabel);
         frame.getContentPane().add(headerPanel, BorderLayout.NORTH);
 
+        // **Tabbed Pane for Menu & Customers**
+        JTabbedPane tabbedPane = new JTabbedPane();
+        frame.getContentPane().add(tabbedPane, BorderLayout.CENTER);
+
         // Menu Table
+        JPanel menuPanel = new JPanel(new BorderLayout());
         String[] columnNames = {bundle.getString("id"), bundle.getString("name"), bundle.getString("price"), bundle.getString("description")};
         menuTableModel = new DefaultTableModel(columnNames, 0);
-        JTable menuTable = new JTable(menuTableModel);
+        menuTable = new JTable(menuTableModel);
         JScrollPane scrollPane = new JScrollPane(menuTable);
-        frame.getContentPane().add(scrollPane, BorderLayout.CENTER);
+        menuPanel.add(new JScrollPane(menuTable), BorderLayout.CENTER);
+        //frame.getContentPane().add(scrollPane, BorderLayout.CENTER);
+        tabbedPane.addTab("Menu", menuPanel);
+
+        // **Customers Panel**
+        JPanel customerPanel = new JPanel(new BorderLayout());
+        String[] customerColumnNames = {"Customer Name", "Loyalty Points"};
+        customerTableModel = new DefaultTableModel(customerColumnNames, 0);
+        customerTable = new JTable(customerTableModel);
+        customerPanel.add(new JScrollPane(customerTable), BorderLayout.CENTER);
+        tabbedPane.addTab("Customers", customerPanel);
 
         // **ADD CLICK LISTENER TO TABLE**
         menuTable.addMouseListener(new MouseAdapter() {
@@ -60,15 +77,19 @@ public class CafeManagementGUI {
 
         // Footer with actions
         JPanel footerPanel = new JPanel();
+        JButton loadCustomersButton = new JButton("Load Customers & Points");
         JButton addButton = new JButton(bundle.getString("add_item"));
         JButton searchButton = new JButton(bundle.getString("search"));
         JButton switchLangButton = new JButton(bundle.getString("switch_language"));
         JButton resetButton = new JButton(bundle.getString("reset"));
+        footerPanel.add(loadCustomersButton);
         footerPanel.add(addButton);
         footerPanel.add(searchButton);
         footerPanel.add(switchLangButton);
         footerPanel.add(resetButton);
         frame.getContentPane().add(footerPanel, BorderLayout.SOUTH);
+
+        loadCustomersButton.addActionListener(e -> loadCustomerLoyaltyPoints());
 
         // Add button action
         addButton.addActionListener(e -> addMenuItem());
@@ -221,6 +242,28 @@ public class CafeManagementGUI {
         JOptionPane.showMessageDialog(frame, bundle.getString("lang_switched"));
         frame.dispose();
         initialize(); // Restart GUI with new language
+    }
+
+    // **New Method to Load Customer Names and Loyalty Points**
+    private void loadCustomerLoyaltyPoints() {
+        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASSWORD)) {
+            String query = "SELECT c.name, lp.points FROM Customers c " +
+                    "LEFT JOIN LoyaltyPoints lp ON c.id = lp.customer_id";
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(query)) {
+
+                customerTableModel.setRowCount(0); // Clear table
+                while (rs.next()) {
+                    customerTableModel.addRow(new Object[]{
+                            rs.getString("name"),
+                            rs.getInt("points")
+                    });
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(frame, "Error loading customers and loyalty points", "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     public static void main(String[] args) {
