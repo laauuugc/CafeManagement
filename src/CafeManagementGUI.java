@@ -110,9 +110,13 @@ public class CafeManagementGUI {
 
     // **NEW FUNCTION TO SHOW INGREDIENTS**
     private void showMenuIngredients(int menuItemId) {
+        JTextPane textPane = new JTextPane();
+        textPane.setContentType("text/html"); // Enable HTML formatting
+        textPane.setEditable(false);
+
         StringBuilder ingredientsList = new StringBuilder();
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASSWORD)) {
-            String query = "SELECT inv.id, inv.ingredient_name, inv.quantity_in_stock " +
+            String query = "SELECT inv.id, inv.ingredient_name, inv.quantity_in_stock, inv.low_stock_threshold " +
                     "FROM MenuIngredients mi " +
                     "JOIN Inventory inv ON mi.ingredient_id = inv.id " +
                     "WHERE mi.menu_item_id = ?";
@@ -120,10 +124,18 @@ public class CafeManagementGUI {
                 pstmt.setInt(1, menuItemId);
                 try (ResultSet rs = pstmt.executeQuery()) {
                     while (rs.next()) {
-                        ingredientsList.append(rs.getString("ingredient_name"))
-                                .append(" - ")
-                                .append(rs.getInt("quantity_in_stock"))
-                                .append("\n");
+                        String ingredientName = rs.getString("ingredient_name");
+                        int quantityInStock = rs.getInt("quantity_in_stock");
+                        int lowStockThreshold = rs.getInt("low_stock_threshold");
+
+                        // If quantity is below or equal to threshold, make it red
+                        String color = (quantityInStock <= lowStockThreshold) ? "red" : "black";
+
+                        ingredientsList.append("<p>")
+                                .append("<b>").append(ingredientName).append("</b>")
+                                .append(" - <span style='color:").append(color).append(";'>")
+                                .append(quantityInStock)
+                                .append("</span></p>");
                     }
                 }
             }
@@ -134,10 +146,16 @@ public class CafeManagementGUI {
         }
 
         if (ingredientsList.length() == 0) {
-            ingredientsList.append(bundle.getString("no_ingredients_found"));
+            ingredientsList.append("<p>").append(bundle.getString("no_ingredients_found")).append("</p>");
         }
 
-        JOptionPane.showMessageDialog(frame, ingredientsList.toString(), bundle.getString("ingredients_list"), JOptionPane.INFORMATION_MESSAGE);
+        ingredientsList.append("</body></html>");
+        textPane.setText(ingredientsList.toString());
+
+        // Wrap in a scrollable dialog
+        JScrollPane scrollPane = new JScrollPane(textPane);
+        scrollPane.setPreferredSize(new Dimension(300, 200));
+        JOptionPane.showMessageDialog(frame, scrollPane, bundle.getString("ingredients_list"), JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void addMenuItem() {
