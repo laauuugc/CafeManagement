@@ -1,6 +1,8 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.sql.*;
 import java.util.Locale;
 import java.util.ResourceBundle;
@@ -13,6 +15,7 @@ public class CafeManagementGUI {
     private JFrame frame;
     private DefaultTableModel menuTableModel;
     private ResourceBundle bundle;
+    private JTable menuTable;
 
     public CafeManagementGUI() {
         setLocale(Locale.ENGLISH); // Default to English
@@ -43,6 +46,17 @@ public class CafeManagementGUI {
         JTable menuTable = new JTable(menuTableModel);
         JScrollPane scrollPane = new JScrollPane(menuTable);
         frame.getContentPane().add(scrollPane, BorderLayout.CENTER);
+
+        // **ADD CLICK LISTENER TO TABLE**
+        menuTable.addMouseListener(new MouseAdapter() {
+            public void mouseClicked(MouseEvent e) {
+                int row = menuTable.getSelectedRow();
+                if (row != -1) {
+                    int menuItemId = (int) menuTableModel.getValueAt(row, 0);
+                    showMenuIngredients(menuItemId);
+                }
+            }
+        });
 
         // Footer with actions
         JPanel footerPanel = new JPanel();
@@ -92,6 +106,35 @@ public class CafeManagementGUI {
             e.printStackTrace();
             JOptionPane.showMessageDialog(frame, bundle.getString("error_loading_menu"), bundle.getString("error"), JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    // **NEW FUNCTION TO SHOW INGREDIENTS**
+    private void showMenuIngredients(int menuItemId) {
+        StringBuilder ingredientsList = new StringBuilder();
+        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASSWORD)) {
+            String query = "SELECT ingredient_id, required_quantity FROM MenuIngredients WHERE menu_item_id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                pstmt.setInt(1, menuItemId);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        ingredientsList.append(rs.getString("ingredient_id"))
+                                .append(" - ")
+                                .append(rs.getInt("required_quantity"))
+                                .append("\n");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(frame, bundle.getString("error_loading_ingredients"), bundle.getString("error"), JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (ingredientsList.length() == 0) {
+            ingredientsList.append(bundle.getString("no_ingredients_found"));
+        }
+
+        JOptionPane.showMessageDialog(frame, ingredientsList.toString(), bundle.getString("ingredients_list"), JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void addMenuItem() {
