@@ -112,7 +112,7 @@ public class CafeManagementGUI {
     private void showMenuIngredients(int menuItemId) {
         StringBuilder ingredientsList = new StringBuilder();
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASSWORD)) {
-            String query = "SELECT inv.id, inv.ingredient_name, mi.required_quantity " +
+            String query = "SELECT inv.id, inv.ingredient_name, inv.quantity_in_stock " +
                     "FROM MenuIngredients mi " +
                     "JOIN Inventory inv ON mi.ingredient_id = inv.id " +
                     "WHERE mi.menu_item_id = ?";
@@ -122,7 +122,7 @@ public class CafeManagementGUI {
                     while (rs.next()) {
                         ingredientsList.append(rs.getString("ingredient_name"))
                                 .append(" - ")
-                                .append(rs.getInt("required_quantity"))
+                                .append(rs.getInt("quantity_in_stock"))
                                 .append("\n");
                     }
                 }
