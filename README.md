@@ -60,7 +60,7 @@ UI Responsiveness:
 └── Language switching: ~300ms complete UI update
 ```
 
-## 🚀 Getting Started (Finally!)
+## Getting Started (Finally!)
 
 ### Prerequisites
 You'll need these installed :
@@ -96,7 +96,7 @@ mysql -u cafe_user -p cafe_madrid < database/schema.sql
 mysql -u cafe_user -p cafe_madrid < database/sample_data.sql
 ```
 
-## 🧪 Testing (Because I Care About Quality)
+## Testing (Because I Care About Quality)
 
 ### What I Actually Test
 - **Database operations** - All CRUD operations with edge cases
@@ -108,7 +108,7 @@ mysql -u cafe_user -p cafe_madrid < database/sample_data.sql
 - [ ] Advanced reporting could be more sophisticated
 - [ ] Mobile responsive design would be nice for tablets
 
-## 🎨 UI/UX Design Decisions
+## UI/UX Design Decisions
 
 ### Why JavaFX?
 Honestly, I chose JavaFX because:
